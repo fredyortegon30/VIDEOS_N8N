@@ -1,0 +1,190 @@
+{
+  "name": "SELECTOR CORREO VIDEO",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            },
+            {
+              "hour": 12,
+              "minute": 1
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ]
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "b65de219-ed14-48db-91c9-5444cc9c50f9",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        300,
+        180
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Kd4SL28WS6IbVNRy",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.appsheet.com/api/v2/apps/28523808-32e0-4dfc-899c-ba3eea8bfb4d/tables/REGISTROS/Action?applicationAccessKey=V2-MSGGu-KxfhN-yRkWb-tkemR-wqSjk-K2vFw-71N2z-Myljc",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"Action\": \"Add\",\n  \"Properties\": {\n\"Locale\": \"es-CO\",\n\"Timezone\": \"America/Bogota\"\n  },\n  \"Rows\": [\n    {\n\"Nombre del Cliente\": \"{{ $json['Nombre del Cliente'] }}\",\n\"Correo del Cliente\": \"{{ $json['Correo del Cliente'] }}\",\n\"Teléfono del Cliente\": \"{{ $json['Teléfono del Cliente'] }}\",\n\"Asunto\": \"{{ $json.Asunto }}\",\n\"Mensaje\": \"{{ $json.Mensaje }}\",\n\"Categoría de Consulta\": \"{{ $json['Categoría de Consulta'] }}\",\n\"Prioridad\": \"{{ $json.Prioridad }}\",\n\"Estado\": \"{{ $json.Estado }}\",\n\"Fecha de Respuesta\": \"{{ $json['Fecha de Respuesta'] }}\",\n\"Enlace a Documento o Archivo\": \"\",\n\"Última Actualización\": \"\"\n      \n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "b28e73b4-aa8e-4129-95e0-1813f72f2a0a",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first();\n\n// Función para limpiar el texto\nfunction cleanText(text) {\n    if (typeof text !== 'string') return text;\n    return text\n        .replace(/\\\\n/g, ' ')         // Reemplaza \\n con espacio\n        .replace(/\\n/g, ' ')          // Reemplaza saltos de línea reales con espacio\n        .replace(/\\\\r/g, ' ')         // Reemplaza \\r con espacio\n        .replace(/\\r/g, ' ')          // Reemplaza retornos de carro reales con espacio\n        .replace(/\\s+/g, ' ')         // Reemplaza múltiples espacios con uno solo\n        .replace(/\\\\\"/g, '\"')         // Maneja comillas escapadas\n        .replace(/\\\\/g, '')           // Elimina backslashes restantes\n        .trim();                      // Elimina espacios al inicio y final\n}\n\n// Función para limpiar recursivamente un objeto\nfunction cleanObject(obj) {\n    if (typeof obj !== 'object' || obj === null) {\n        return cleanText(obj);\n    }\n    \n    if (Array.isArray(obj)) {\n        return obj.map(item => cleanObject(item));\n    }\n    \n    const cleanObj = {};\n    for (const [key, value] of Object.entries(obj)) {\n        cleanObj[key] = cleanObject(value);\n    }\n    return cleanObj;\n}\n\ntry {\n    // Si el mensaje viene como string JSON, intentamos parsearlo\n    if (inputData?.json?.message?.content) {\n        let content = inputData.json.message.content;\n        \n        // Si es string, limpiamos antes de parsear\n        if (typeof content === 'string') {\n            content = cleanText(content);\n            try {\n                const parsedContent = JSON.parse(content);\n                return cleanObject(parsedContent);\n            } catch (parseError) {\n                // Si no se puede parsear, retornamos el contenido limpio\n                return content;\n            }\n        }\n        // Si no es string, limpiamos el objeto directamente\n        return cleanObject(content);\n    }\n    \n    // Si no hay message.content, limpiamos todo el objeto de entrada\n    return cleanObject(inputData.json);\n    \n} catch (error) {\n    console.log('Error procesando datos:', error);\n    // Como último recurso, retornamos los datos originales\n    return inputData.json;\n}"
+      },
+      "id": "322b66fe-4885-4188-b407-72ed16c1f074",
+      "name": "Code1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return {\n  json: {\n    id: $json.id,\n    labels: JSON.stringify($json.labelIds),\n    from: $json.from.text, // Usamos .text para obtener el formato correcto del remitente\n    subject: $json.subject,\n    snippet: $json.text.substring(0, 200), // Tomamos los primeros 200 caracteres como snippet\n    date: $json.date, // Agregamos la fecha para el timestamp\n    // Agregamos el mensaje completo por si se necesita analizar el contenido\n    fullMessage: $json.text\n  }\n};"
+      },
+      "id": "c8c27923-d15b-4b5c-b4f2-ed1f25463cb2",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres un asistente especializado en clasificar correos electrónicos. Analiza cada correo y determina si es promocional o una solicitud genuina que requiere atención. \n\nRecibirás los datos en este formato:\nid:{{ $json.id }}\nLabels: {{$json.labels}}\nFrom: {{$json.from}}\nSubject: {{$json.subject}}\nSnippet: {{$json.snippet}}\nFullMessage: {{$json.fullMessage  }}\n\nREGLAS DE CLASIFICACIÓN:\nSi encuentras CUALQUIERA de estos indicadores, responde únicamente \"CORREO_PROMOCIONAL\":\n\n1. ETIQUETAS:\n- Contiene \"CATEGORY_PROMOTIONS\"\n- Contiene \"CATEGORY_SOCIAL\"\n- Contiene \"CATEGORY_UPDATES\"\n\n2. REMITENTE:\n- Dirección contiene: info@, marketing@, noreply@, news@, notifications@\n\n3. ASUNTO/CONTENIDO:\n- Contiene palabras como: newsletter, subscribe, unsubscribe, webinar\n- Frases como: \"View as Web Page\", \"Don't miss\", \"latest news\"\n- Referencias a eventos, conferencias o actualizaciones masivas\n\nSi NO es un correo promocional, proporciona la siguiente estructura JSON (todo en una sola línea):\n{\"ID\":\"[id del correo]\",\"Fecha de Recepción\":\"[timestamp en ISO]\",\"Nombre del Cliente\":\"[extraído del From]\",\"Correo del Cliente\":\"[email extraído del From]\",\"Teléfono del Cliente\":\"[si se encuentra en el contenido]\",\"Asunto\":\"[asunto original]\",\"Mensaje\":\"[fullMessage]\",\"Categoría de Consulta\":\"[Citas Médicas/Autorizaciones/Facturación/Reclamos/General]\",\"Prioridad\":\"[Alta/Media/Baja]\",\"Estado\":\"Nuevo\",\"Fecha de Respuesta\":\"\",\"Respuesta Automática\":\"\",\"Agente Asignado\":\"\",\"Notas del Agente\":\"\",\"Enlace a Documento o Archivo\":\"\",\"Última Actualización\":\"[timestamp actual]\"}\n\nCRITERIOS DE PRIORIDAD:\n- Alta: contiene palabras como \"urgente\", \"emergencia\", \"crítico\", \"dolor intenso\", \"síntomas graves\", \"ambulancia\"\n- Media: autorizaciones médicas, medicamentos, citas prioritarias o tiene etiqueta \"IMPORTANT\"\n- Baja: consultas generales, informativas o administrativas\n\nCATEGORÍAS DE CONSULTA:\n- Citas Médicas: agendamiento, cancelaciones, modificaciones de citas\n- Autorizaciones: solicitudes de procedimientos, exámenes, medicamentos\n- Facturación: pagos, copagos, facturas, planes de salud\n- Reclamos: quejas sobre servicio, demoras en atención, inconformidades\n- General: otras consultas que no encajen en las anteriores\n\nEJEMPLO DE ENTRADA:\nid: 192d68641a0c3ac9\nLabels: [{\"id\":\"INBOX\",\"name\":\"INBOX\"},{\"id\":\"IMPORTANT\",\"name\":\"IMPORTANT\"},{\"id\":\"CATEGORY_PERSONAL\",\"name\":\"CATEGORY_PERSONAL\"},{\"id\":\"UNREAD\",\"name\":\"UNREAD\"}]\nFrom: \"LORENA HERNANDEZ LOPEZ <lorena1056hernandezlop@gmail.com>\"\nSubject: \"Solicitud Urgente de Autorización\"\nSnippet: \"Necesito autorización urgente para medicamento control dolor\"\n\nEJEMPLO DE RESPUESTA CORRECTA (para correo no promocional):\n{\"ID\":\"192d68641a0c3ac9\",\"Fecha de Recepción\":\"2024-02-28T15:25:10Z\",\"Nombre del Cliente\":\"LORENA HERNANDEZ LOPEZ\",\"Correo del Cliente\":\"lorena1056hernandezlop@gmail.com\",\"Teléfono del Cliente\":\"\",\"Asunto\":\"Solicitud Urgente de Autorización\",\"Mensaje\":\"Necesito autorización urgente para medicamento control dolor\",\"Categoría de Consulta\":\"Autorizaciones\",\"Prioridad\":\"Alta\",\"Estado\":\"Nuevo\",\"Fecha de Respuesta\":\"\",\"Respuesta Automática\":\"\",\"Agente Asignado\":\"\",\"Notas del Agente\":\"\",\"Enlace a Documento o Archivo\":\"\",\"Última Actualización\":\"[timestamp actual]\"}\n\nIMPORTANTE:\n1. NO proporciones explicaciones adicionales\n2. SOLO responde \"CORREO_PROMOCIONAL\" o el JSON estructurado\n3. Si es promocional, SOLO responde \"CORREO_PROMOCIONAL\"\n4. Si hay error al procesar los datos, responde \"ERROR_PROCESAMIENTO\""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "07f52e09-1a21-4a25-ae8f-de49db6f4d31",
+      "name": "OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.5,
+      "position": [
+        780,
+        180
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "2dYQGLulSXWiw9O7",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "versionId": "dc394ac0-92ec-40aa-b933-2c9fe6d5bc63",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b38170b8d851a2d7a677391dd9471131a98fa71876b94a9ee4ba97437a05ffc2"
+  },
+  "id": "whgQNHAdpPwsvUNx",
+  "tags": []
+}
