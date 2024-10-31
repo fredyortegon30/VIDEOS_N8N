@@ -1,5 +1,5 @@
 {
-  "name": "SELECTOR CORREO VIDEO",
+  "name": "selector de gmail con ia",
   "nodes": [
     {
       "parameters": {
@@ -25,18 +25,18 @@
           "downloadAttachments": true
         }
       },
-      "id": "c9651c4a-fd9b-4639-b9f2-f46f695e40bf",
+      "id": "7010070a-ab1f-4158-856c-ed0e3b3d2a36",
       "name": "Gmail Trigger",
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.1,
       "position": [
-        240,
-        40
+        700,
+        80
       ],
       "credentials": {
         "gmailOAuth2": {
-          "id": "Kd4SL28WS6IbVNRy",
-          "name": "Gmail account 2"
+          "id": "S4Eb1SRmiJvKxswU",
+          "name": "Gmail account"
         }
       }
     },
@@ -55,29 +55,29 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"Action\": \"Add\",\n  \"Properties\": {\n\"Locale\": \"es-CO\",\n\"Timezone\": \"America/Bogota\"\n  },\n  \"Rows\": [\n    {\n\"Nombre del Cliente\": \"{{ $json['Nombre del Cliente'] }}\",\n\"Correo del Cliente\": \"{{ $json['Correo del Cliente'] }}\",\n\"Teléfono del Cliente\": \"{{ $json['Teléfono del Cliente'] }}\",\n\"Asunto\": \"{{ $json.Asunto }}\",\n\"Mensaje\": \"{{ $json.Mensaje }}\",\n\"Categoría de Consulta\": \"{{ $json['Categoría de Consulta'] }}\",\n\"Prioridad\": \"{{ $json.Prioridad }}\",\n\"Estado\": \"{{ $json.Estado }}\",\n\"Fecha de Respuesta\": \"{{ $json['Fecha de Respuesta'] }}\",\n\"Enlace a Documento o Archivo\": \"\",\n\"Última Actualización\": \"\"\n      \n    }\n  ]\n}",
+        "jsonBody": "={\n  \"Action\": \"Add\",\n  \"Properties\": {\n\"Locale\": \"es-CO\",\n\"Timezone\": \"America/Bogota\"\n  },\n  \"Rows\": [\n    {\n\"Nombre del Cliente\": \"{{ $json['Nombre del Cliente'] }}\",\n\"Correo del Cliente\": \"{{ $json['Correo del Cliente'] }}\",\n\"Teléfono del Cliente\": \"{{ $json['Teléfono del Cliente'] }}\",\n\"Asunto\": \"{{ $json.Asunto }}\",\n\"Mensaje\": \"{{ $json.Mensaje }}\",\n\"Categoría de Consulta\": \"{{ $json['Categoría de Consulta'] }}\",\n\"Prioridad\": \"{{ $json.Prioridad }}\",\n\"Estado\": \"{{ $json.Estado }}\",\n\"Enlace a Documento o Archivo\": \"\",\n\"Última Actualización\": \"\"\n      \n    }\n  ]\n}",
         "options": {}
       },
-      "id": "2297f37e-139d-4598-8e1b-d0bb3447e020",
+      "id": "8408b164-53ee-439a-9f02-3ac33e1fe68d",
       "name": "HTTP Request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1600,
-        40
+        1920,
+        80
       ]
     },
     {
       "parameters": {
         "jsCode": "const inputData = $input.first();\n\n// Función para limpiar el texto\nfunction cleanText(text) {\n    if (typeof text !== 'string') return text;\n    return text\n        .replace(/\\\\n/g, ' ')         // Reemplaza \\n con espacio\n        .replace(/\\n/g, ' ')          // Reemplaza saltos de línea reales con espacio\n        .replace(/\\\\r/g, ' ')         // Reemplaza \\r con espacio\n        .replace(/\\r/g, ' ')          // Reemplaza retornos de carro reales con espacio\n        .replace(/\\s+/g, ' ')         // Reemplaza múltiples espacios con uno solo\n        .replace(/\\\\\"/g, '\"')         // Maneja comillas escapadas\n        .replace(/\\\\/g, '')           // Elimina backslashes restantes\n        .trim();                      // Elimina espacios al inicio y final\n}\n\n// Función para limpiar recursivamente un objeto\nfunction cleanObject(obj) {\n    if (typeof obj !== 'object' || obj === null) {\n        return cleanText(obj);\n    }\n    \n    if (Array.isArray(obj)) {\n        return obj.map(item => cleanObject(item));\n    }\n    \n    const cleanObj = {};\n    for (const [key, value] of Object.entries(obj)) {\n        cleanObj[key] = cleanObject(value);\n    }\n    return cleanObj;\n}\n\ntry {\n    // Si el mensaje viene como string JSON, intentamos parsearlo\n    if (inputData?.json?.message?.content) {\n        let content = inputData.json.message.content;\n        \n        // Si es string, limpiamos antes de parsear\n        if (typeof content === 'string') {\n            content = cleanText(content);\n            try {\n                const parsedContent = JSON.parse(content);\n                return cleanObject(parsedContent);\n            } catch (parseError) {\n                // Si no se puede parsear, retornamos el contenido limpio\n                return content;\n            }\n        }\n        // Si no es string, limpiamos el objeto directamente\n        return cleanObject(content);\n    }\n    \n    // Si no hay message.content, limpiamos todo el objeto de entrada\n    return cleanObject(inputData.json);\n    \n} catch (error) {\n    console.log('Error procesando datos:', error);\n    // Como último recurso, retornamos los datos originales\n    return inputData.json;\n}"
       },
-      "id": "8a8b3321-c3ae-45e4-b2e8-fd3431a7ec54",
+      "id": "1c7567ab-67bf-4b36-a0e4-9ee72a02d2df",
       "name": "Code1",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1140,
-        40
+        1660,
+        80
       ]
     },
     {
@@ -85,13 +85,13 @@
         "mode": "runOnceForEachItem",
         "jsCode": "return {\n  json: {\n    id: $json.id,\n    labels: JSON.stringify($json.labelIds),\n    from: $json.from.text, // Usamos .text para obtener el formato correcto del remitente\n    subject: $json.subject,\n    snippet: $json.text.substring(0, 200), // Tomamos los primeros 200 caracteres como snippet\n    date: $json.date, // Agregamos la fecha para el timestamp\n    // Agregamos el mensaje completo por si se necesita analizar el contenido\n    fullMessage: $json.text\n  }\n};"
       },
-      "id": "25a408e6-e388-49fe-bbdf-2c67d250ea2a",
+      "id": "ea138d8b-e9af-4bda-afdd-ae1f3758c59f",
       "name": "Code",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        500,
-        40
+        960,
+        80
       ]
     },
     {
@@ -111,17 +111,17 @@
         },
         "options": {}
       },
-      "id": "327991f8-23b9-4493-9a69-0991c7dc2074",
+      "id": "f142bc37-4242-4b9d-be32-0d9cba8bca06",
       "name": "OpenAI",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.5,
       "position": [
-        720,
-        40
+        1200,
+        80
       ],
       "credentials": {
         "openAiApi": {
-          "id": "2dYQGLulSXWiw9O7",
+          "id": "vVrDP4M5knxy0lvh",
           "name": "OpenAi account"
         }
       }
@@ -174,17 +174,15 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner"
+    "executionOrder": "v1"
   },
-  "versionId": "a9d6f848-ece2-4fe3-8aa5-f273f934d6d6",
+  "versionId": "3cb616ca-7352-41ee-a59e-34c3bdca17bb",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "b38170b8d851a2d7a677391dd9471131a98fa71876b94a9ee4ba97437a05ffc2"
+    "instanceId": "9d373acf397da491fb8e3332463e6893d349ff6f1e032a80019f783100bf9646"
   },
-  "id": "whgQNHAdpPwsvUNx",
+  "id": "wNVQtNeRBE8FjD9t",
   "tags": []
 }
